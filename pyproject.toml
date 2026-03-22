@@ -1,6 +1,6 @@
 [project]
 name = "kubesure"
-version = "0.0.1"
+version = "0.0.2"
 description = "Kubesure: Centralizes the best tools in the Kubernetes ecosystem to ensure security, compliance, and design standards in your YAML files."
 authors = [
     { name = "Felipe R. Broering", email = "feliperodriguesbroering@gmail.com" }
