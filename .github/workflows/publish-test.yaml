@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version_suffix:
-        description: 'Version suffix (ex: dev1, rc1)'
+        description: 'Version suffix (e.g. dev1, rc1). Use "none", empty, or "-" to publish without suffix (pyproject version as-is).'
         required: false
         default: 'dev'
 
@@ -36,9 +36,8 @@ jobs:
           import re
           from pathlib import Path
 
-          suffix = (os.environ.get("VERSION_SUFFIX") or "").strip() or "dev0"
-          if suffix == "dev":
-              suffix = "dev0"
+          raw = (os.environ.get("VERSION_SUFFIX") or "").strip()
+          no_suffix = not raw or raw.lower() in ("none", "-", "false", "no")
 
           pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
           m = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, re.MULTILINE)
@@ -46,12 +45,18 @@ jobs:
               raise SystemExit("Could not read project.version from pyproject.toml")
           base = m.group(1)
 
-          if suffix.startswith("dev"):
-              new_version = f"{base}.{suffix}"
-          elif re.match(r"^(rc|a|b)\d+", suffix):
-              new_version = f"{base}{suffix}"
+          if no_suffix:
+              new_version = base
           else:
-              new_version = f"{base}.{suffix}"
+              suffix = raw
+              if suffix == "dev":
+                  suffix = "dev0"
+              if suffix.startswith("dev"):
+                  new_version = f"{base}.{suffix}"
+              elif re.match(r"^(rc|a|b)\d+", suffix):
+                  new_version = f"{base}{suffix}"
+              else:
+                  new_version = f"{base}.{suffix}"
 
           pyproject_new = re.sub(
               r'^version\s*=\s*"[^"]+"',
