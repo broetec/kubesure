@@ -2,11 +2,24 @@
 name = "kubesure"
 version = "0.0.2"
 description = "Kubesure: Centralizes the best tools in the Kubernetes ecosystem to ensure security, compliance, and design standards in your YAML files."
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
 authors = [
     { name = "Felipe R. Broering", email = "feliperodriguesbroering@gmail.com" }
 ]
-readme = "README.md"
-requires-python = ">=3.10,<4.0"
+
 dependencies = [
     "typer>=0.12.0",
 ]
