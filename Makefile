@@ -1,6 +1,9 @@
 API_CONTAINER_NAME=kubesure
 PATH_PROJECT=./src
+PYTHON_VERSION=3.10
+MIN_COVERAGE=90
 .DEFAULT_GOAL := help
+
 
 # ---- Variables ---------------------------------------------------------------
 PYTEST_ARGS = -s -x -vv --cov=$(PATH_PROJECT) \
@@ -8,35 +11,31 @@ PYTEST_ARGS = -s -x -vv --cov=$(PATH_PROJECT) \
 	--cov-report=term-missing \
 	--cov-report=html:coverage_html
 
-PYTEST_CMD_IF = if [ -f .env ]; then \
-	PYTEST_CMD="uv run --no-project dotenv -f .env run pytest"; \
-else \
-	PYTEST_CMD="uv run --no-project pytest"; \
-fi
-
-RUN_PYTEST = $(PYTEST_CMD_IF); $$PYTEST_CMD $(PYTEST_ARGS)
-
 
 # ---- Local -------------------------------------------------------------------
-.PHONY: pre-commit-install lint format test clean
-pre-commit-install: ## Install Git hooks (Conventional Commits validation for semantic-release)
+.PHONY: install pre-commit-install lint format test clean
+
+install: ## Install dependencies locally using uv
+	uv venv --python $(PYTHON_VERSION)
+	uv sync --all-groups
+
+pre-commit-install: ## Install Git hooks
 	uv run pre-commit install --install-hooks
 
-lint: ## Run lint checks
-	ruff check $(PATH_PROJECT) && ruff check $(PATH_PROJECT) --diff
+lint: ## Run lint checks (Ruff)
+	uv run ruff check $(PATH_PROJECT)
+	uv run ruff format --check $(PATH_PROJECT)
 
-format: ## Run code formatter
-	ruff check $(PATH_PROJECT) --fix && ruff format $(PATH_PROJECT)
+format: ## Run code formatter and fix lint issues
+	uv run ruff check --fix $(PATH_PROJECT)
+	uv run ruff format $(PATH_PROJECT)
 
-test: ## Run tests
-	$(RUN_PYTEST)
+test: ## Run tests locally
+	uv run pytest $(PYTEST_ARGS)
 
-clean: ## Clean up coverage files
-	rm -rf .coverage
-	rm -rf coverage.xml
-	rm -rf coverage_html
-	rm -rf .pytest_cache
-	rm -rf htmlcov
+clean: ## Clean up temporary files
+	rm -rf .coverage coverage.xml coverage_html .pytest_cache htmlcov .ruff_cache
+	find . -type d -name "__pycache__" -exec rm -rf {} +
 
 
 # ---- Docker ------------------------------------------------------------------
@@ -45,7 +44,6 @@ docker-build: ## Build Docker image with tooling
 	docker compose build --no-cache
 
 docker-start: ## Start Docker containers
-	docker compose build --no-cache
 	docker compose up -d
 
 docker-test: ## Run tests in Docker
@@ -64,17 +62,21 @@ test-coverage-ci: ## Run tests + coverage via docker-test; prints COVERAGE_PERCE
 	\
 	docker compose run --rm -e PYTHONPATH=/app -w /app \
 		-v "$(CURDIR):/host" $(API_CONTAINER_NAME) \
-		sh -c '$(RUN_PYTEST) && cp coverage.xml /host/coverage.xml' && \
+		sh -c '$(RUN_PYTEST) && \
+		cp coverage.xml /host/coverage.xml' && \
 	\
 	COVERAGE=$$(sed -n 's/.*line-rate="\([^"]*\)".*/\1/p' coverage.xml | head -n 1); \
 	PERCENT=$$(echo "scale=2; $$COVERAGE * 100" | bc); \
 	\
+	echo "------------------------------------------"; \
+	echo "COVERAGE_PERCENT: $$PERCENT%"; \
+	echo "MIN_REQUIRED: $(MIN_COVERAGE)%"; \
+	echo "------------------------------------------"; \
+	\
 	if [ -z "$$COVERAGE" ]; then \
 		echo "coverage: TOTAL value not found"; \
 		exit 1; \
-	fi; \
-	\
-	echo "COVERAGE_PERCENT=$$PERCENT"
+	fi;
 
 
 # ---- Help --------------------------------------------------------------------
