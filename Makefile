@@ -1,7 +1,9 @@
-API_CONTAINER_NAME=kubesure
+# ---- Configuration (Update these for your project) ---------------------------
+PROJECT_NAME=kubesure
 PATH_PROJECT=./src
 PYTHON_VERSION=3.10
 MIN_COVERAGE=90
+API_CONTAINER_NAME=$(PROJECT_NAME)
 .DEFAULT_GOAL := help
 
 
@@ -82,21 +84,27 @@ test-coverage-ci: ## Run tests + coverage via docker-test; prints COVERAGE_PERCE
 
 # ---- Debug & Info ------------------------------------------------------------
 .PHONY: debug-info
-debug-info: ## Generate a report of the local environment for bug reporting
-	@echo "=== kubesure Debug Report ==="
-	@echo "Date: $$(date)"
-	@echo "OS: $$(uname -s -r)"
-	@echo "--- Tool Versions ---"
-	@python3 --version || echo "Python: Not found"
-	@uv --version || echo "uv: Not found"
-	@kustomize version --short 2>/dev/null || echo "Kustomize: Not found"
-	@kubectl version --client --short 2>/dev/null || echo "Kubectl: Not found"
-	@echo "--- Project Info ---"
-	@echo "Project: $(API_CONTAINER_NAME)"
-	@echo "Path: $(PATH_PROJECT)"
-	@if [ -d .git ]; then echo "Git Branch: $$(git rev-parse --abbrev-ref HEAD)"; fi
+debug-info: ## Print environment details (paste into bug reports)
+	@echo "=== $(PROJECT_NAME) debug report ==="
+	@echo "Date: $$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date)"
+	@echo "OS: $$(uname -s -r 2>/dev/null || echo unknown)"
+	@echo "--- Tool versions ---"
+	@command -v uv >/dev/null 2>&1 && uv --version || echo "uv: not found"
+	@command -v uv >/dev/null 2>&1 && uv run python --version 2>/dev/null || true
+	@command -v uv >/dev/null 2>&1 && uv run ruff --version 2>/dev/null || true
+	@command -v uv >/dev/null 2>&1 && uv run pytest --version 2>/dev/null || true
+	@command -v docker >/dev/null 2>&1 && docker --version || echo "docker: not found"
+	@command -v docker >/dev/null 2>&1 && docker compose version 2>/dev/null || true
+	@echo "--- Project ---"
+	@echo "PROJECT_NAME=$(PROJECT_NAME)"
+	@echo "PATH_PROJECT=$(PATH_PROJECT)"
+	@echo "PYTHON_VERSION=$(PYTHON_VERSION)"
+	@echo "MIN_COVERAGE=$(MIN_COVERAGE)"
+	@if [ -d .git ]; then \
+		echo "Git branch: $$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"; \
+		echo "Git SHA: $$(git rev-parse --short HEAD 2>/dev/null)"; \
+	fi
 	@echo "============================="
-
 
 # ---- Help --------------------------------------------------------------------
 .PHONY: help
