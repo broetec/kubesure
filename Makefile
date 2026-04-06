@@ -40,6 +40,7 @@ clean: ## Clean up temporary files
 
 # ---- Docker ------------------------------------------------------------------
 .PHONY: docker-build docker-start docker-test docker-stop
+
 docker-build: ## Build Docker image with tooling
 	docker compose build --no-cache
 
@@ -49,7 +50,7 @@ docker-start: ## Start Docker containers
 docker-test: ## Run tests in Docker
 	docker compose build --no-cache
 	docker compose run --rm -e PYTHONPATH=/app -w /app $(API_CONTAINER_NAME) \
-		sh -c '$(RUN_PYTEST)'
+		sh -c 'uv run pytest $(PYTEST_ARGS)'
 
 docker-stop: ## Stop Docker containers
 	docker compose down
@@ -77,6 +78,24 @@ test-coverage-ci: ## Run tests + coverage via docker-test; prints COVERAGE_PERCE
 		echo "coverage: TOTAL value not found"; \
 		exit 1; \
 	fi;
+
+
+# ---- Debug & Info ------------------------------------------------------------
+.PHONY: debug-info
+debug-info: ## Generate a report of the local environment for bug reporting
+	@echo "=== kubesure Debug Report ==="
+	@echo "Date: $$(date)"
+	@echo "OS: $$(uname -s -r)"
+	@echo "--- Tool Versions ---"
+	@python3 --version || echo "Python: Not found"
+	@uv --version || echo "uv: Not found"
+	@kustomize version --short 2>/dev/null || echo "Kustomize: Not found"
+	@kubectl version --client --short 2>/dev/null || echo "Kubectl: Not found"
+	@echo "--- Project Info ---"
+	@echo "Project: $(API_CONTAINER_NAME)"
+	@echo "Path: $(PATH_PROJECT)"
+	@if [ -d .git ]; then echo "Git Branch: $$(git rev-parse --abbrev-ref HEAD)"; fi
+	@echo "============================="
 
 
 # ---- Help --------------------------------------------------------------------
